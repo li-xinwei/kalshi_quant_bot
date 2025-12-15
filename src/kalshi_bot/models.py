@@ -15,3 +15,6 @@ class OrderIntent:
     price_cents: int
     reason: str = ""
     client_order_id: Optional[str] = None
+    # Execution flags (passed through to Kalshi Create Order)
+    post_only: bool = True
+    reduce_only: bool = False

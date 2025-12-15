@@ -35,7 +35,17 @@ Copy `.env.example` to `.env` and fill values:
 - `KALSHI_API_KEY_ID=...`
 - `KALSHI_PRIVATE_KEY_PATH=/path/to/private_key.pem`
 - `TICKERS=FED-23DEC-T3.00,ANOTHER-TICKER`  (comma-separated)
-- Optional: `FAIR_PROBS_JSON={"FED-23DEC-T3.00": 0.42}` (starter strategy uses this)
+- Optional: `FAIR_PROBS_JSON={"FED-23DEC-T3.00": 0.42}` (used as your model prior)
+
+Fee-aware settings (recommended so you don't mistake micro-edges for alpha):
+- `FEE_KIND=taker|maker|none` (default: taker)
+- `TAKER_FEE_RATE=0.07`, `MAKER_FEE_RATE=0.0175` (override if Kalshi updates)
+- `MIN_NET_EV_PER_CONTRACT=0.00` (raise this to be conservative)
+- `POST_ONLY=true` (maker-style) or `POST_ONLY=false` (cross spread)
+
+Optional sports/in-play hook:
+- `USE_LIVE_DATA=true` enables a **toy** in-play win-prob provider based on Kalshi milestones + live_data.
+  You'll want to replace/tune the coefficients after backtesting.
 
 ## 4) Run (paper or live)
 Paper mode (no orders submitted):
@@ -57,7 +67,7 @@ python -m kalshi_bot.run
 
 ## 6) Next upgrades (recommended)
 - Replace polling with WebSocket orderbook deltas (see Kalshi WebSocket docs).
-- Implement your sports win-prob model + external odds ingestion.
+- Implement your real sports win-prob model + external odds ingestion.
 - Persist fills/orders in Postgres + add dashboard/alerts.
 - Add unit tests for strategy + risk.
 

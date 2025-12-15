@@ -44,6 +44,45 @@ class KalshiAPI:
     def get_orderbook(self, ticker: str, depth: int = 10) -> Dict[str, Any]:
         return self.http.get(f"/markets/{ticker}/orderbook", params={"depth": depth})
 
+    def get_milestones(
+        self,
+        *,
+        limit: int = 100,
+        minimum_start_date: Optional[str] = None,
+        category: Optional[str] = None,
+        competition: Optional[str] = None,
+        source_id: Optional[str] = None,
+        type: Optional[str] = None,
+        related_event_ticker: Optional[str] = None,
+        cursor: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        params: Dict[str, Any] = {"limit": int(limit)}
+        if minimum_start_date:
+            params["minimum_start_date"] = minimum_start_date
+        if category:
+            params["category"] = category
+        if competition:
+            params["competition"] = competition
+        if source_id:
+            params["source_id"] = source_id
+        if type:
+            params["type"] = type
+        if related_event_ticker:
+            params["related_event_ticker"] = related_event_ticker
+        if cursor:
+            params["cursor"] = cursor
+        return self.http.get("/milestones", params=params)
+
+    def get_milestone(self, milestone_id: str) -> Dict[str, Any]:
+        return self.http.get(f"/milestones/{milestone_id}")
+
+    def get_live_data(self, *, live_type: str, milestone_id: str) -> Dict[str, Any]:
+        return self.http.get(f"/live_data/{live_type}/milestone/{milestone_id}")
+
+    def get_multiple_live_data(self, *, milestone_ids: List[str]) -> Dict[str, Any]:
+        # GET /live_data/batch?milestone_ids=...
+        return self.http.get("/live_data/batch", params={"milestone_ids": list(milestone_ids)})
+
     def best_prices_from_orderbook(self, orderbook_json: Dict[str, Any]) -> BestPrices:
         ob = orderbook_json["orderbook"]
         yes_bid = _best_bid(ob.get("yes", []))

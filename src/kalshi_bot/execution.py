@@ -43,7 +43,8 @@ class Executor:
                     count=it.count,
                     price_cents=it.price_cents,
                     client_order_id=client_id,
-                    post_only=True,
+                    post_only=it.post_only,
+                    reduce_only=it.reduce_only,
                 )
                 order_id = resp.get("order", {}).get("order_id", "unknown")
                 results.append(ExecutionResult(it, True, f"ORDER_SENT order_id={order_id}"))

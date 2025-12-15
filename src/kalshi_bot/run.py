@@ -8,7 +8,8 @@ from .config import BotConfig
 from .kalshi.auth import KalshiSigner
 from .kalshi.http import KalshiHTTPClient, RateLimiter
 from .kalshi.api import KalshiAPI
-from .strategy import MarketSnapshot, SimpleFairValueStrategy, FairValueConfig
+from .strategy import MarketSnapshot, FeeAwareFairValueStrategy, FeeAwareConfig
+from .fair_prob import StaticFairProbProvider, LiveDataWinProbProvider
 from .risk import RiskManager, RiskLimits
 from .execution import Executor
 
@@ -33,8 +34,29 @@ def main():
     )
     api = KalshiAPI(http)
 
-    strat = SimpleFairValueStrategy(
-        FairValueConfig(fair_probs=cfg.fair_probs, edge_threshold=cfg.edge_threshold),
+    # Strategy #2 foundation: independent fair-prob model vs market price (fee-aware)
+    provider = (
+        LiveDataWinProbProvider(
+            api=api,
+            fair_probs_yes=cfg.fair_probs,
+            coef_score_diff=cfg.coef_score_diff,
+            coef_time_left_min=cfg.coef_time_left_min,
+            coef_prior=cfg.coef_prior,
+        )
+        if cfg.use_live_data
+        else StaticFairProbProvider(cfg.fair_probs)
+    )
+
+    strat = FeeAwareFairValueStrategy(
+        FeeAwareConfig(
+            edge_threshold=cfg.edge_threshold,
+            fee_kind=cfg.fee_kind,
+            taker_fee_rate=cfg.taker_fee_rate,
+            maker_fee_rate=cfg.maker_fee_rate,
+            min_net_ev_per_contract=cfg.min_net_ev_per_contract,
+            post_only=cfg.post_only,
+        ),
+        provider=provider,
         order_count=min(5, cfg.max_order_count),
     )
 
@@ -43,6 +65,8 @@ def main():
 
     print(f"[kalshi-bot] env={cfg.env} host={cfg.host} paper={args.paper}")
     print(f"[kalshi-bot] tickers={cfg.tickers}")
+    print(f"[kalshi-bot] fee_kind={cfg.fee_kind} post_only={cfg.post_only} min_net_ev=${cfg.min_net_ev_per_contract:.4f}")
+    print(f"[kalshi-bot] use_live_data={cfg.use_live_data}")
 
     while True:
         snaps: List[MarketSnapshot] = []
