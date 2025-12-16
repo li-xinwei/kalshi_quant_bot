@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  kalshi-bot:
+    build: .
+    container_name: kalshi-trading-bot
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
+      - ./lxw.txt:/app/lxw.txt:ro
+    environment:
+      - FLASK_ENV=production
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-change-me-in-production}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+

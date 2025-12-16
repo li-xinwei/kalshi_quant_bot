@@ -1,0 +1,36 @@
+# Railway 环境变量配置
+# 复制这些变量到 Railway Dashboard → Variables
+
+# ===== 必需变量 =====
+KALSHI_ENV=demo
+KALSHI_API_KEY_ID=95b8c647-f528-4433-8342-7222beb6efdf
+KALSHI_PRIVATE_KEY_PATH=/app/lxw.txt
+TICKERS=KXNEWPOPE-70-PPIZ
+FAIR_PROBS_JSON={"KXNEWPOPE-70-PPIZ": 0.995}
+EDGE_THRESHOLD=0.005
+FLASK_SECRET_KEY=840c9960892dee4e79dfe5a6bda715ad99d9a6a32d17e233ff3ebe6aed9c3b1c
+PYTHONPATH=/app/src
+
+# ===== 可选变量（使用默认值） =====
+FEE_KIND=taker
+TAKER_FEE_RATE=0.07
+MAKER_FEE_RATE=0.0175
+MIN_NET_EV_PER_CONTRACT=0.0
+POST_ONLY=true
+MAX_ORDER_COUNT=10
+MAX_POSITION_PER_TICKER=50
+POLL_SECONDS=2.0
+USE_LIVE_DATA=false
+COEF_SCORE_DIFF=0.12
+COEF_TIME_LEFT_MIN=-0.03
+COEF_PRIOR=1.0
+
+# ===== 说明 =====
+# 1. FLASK_SECRET_KEY: 运行以下命令生成随机密钥
+#    openssl rand -hex 32
+#
+# 2. KALSHI_PRIVATE_KEY_PATH: 必须设置为 /app/lxw.txt
+#    然后在 Railway Settings → Volumes 中上传 lxw.txt 文件
+#
+# 3. 所有变量设置后，Railway 会自动重新部署
+

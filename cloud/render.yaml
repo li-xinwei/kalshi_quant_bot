@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: kalshi-trading-bot
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONPATH
+        value: /app/src
+    healthCheckPath: /api/health
+    autoDeploy: true
+

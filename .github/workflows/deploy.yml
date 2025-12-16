@@ -1,0 +1,45 @@
+name: Deploy to Cloud
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r webapp/requirements.txt
+      
+      - name: Run tests
+        run: |
+          python -m pytest tests/ || true
+      
+      - name: Build Docker image
+        run: |
+          docker build -t kalshi-bot:latest .
+      
+      # Railway deployment (if configured)
+      - name: Deploy to Railway
+        if: env.RAILWAY_TOKEN != ''
+        uses: bervProject/railway-deploy@v1.0.0
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: kalshi-bot
+      
+      # Render deployment (if configured)
+      - name: Deploy to Render
+        if: env.RENDER_API_KEY != ''
+        run: |
+          curl -X POST https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}
+

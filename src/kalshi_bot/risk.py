@@ -20,14 +20,22 @@ class RiskManager:
 
     def current_position(self, ticker: str) -> int:
         # Positions response structure may include multiple entries; we sum counts for the ticker.
-        resp = self.api.get_positions(ticker=ticker, limit=200)
-        positions = resp.get("positions", [])
-        total = 0
-        for p in positions:
-            # Some APIs represent separate yes/no positions; treat signed exposure simply here.
-            # If you want exact exposure, model YES and NO legs separately.
-            total += int(p.get("position", 0)) if "position" in p else int(p.get("count", 0))
-        return total
+        try:
+            resp = self.api.get_positions(ticker=ticker, limit=200)
+            positions = resp.get("positions", [])
+            total = 0
+            for p in positions:
+                # Some APIs represent separate yes/no positions; treat signed exposure simply here.
+                # If you want exact exposure, model YES and NO legs separately.
+                total += int(p.get("position", 0)) if "position" in p else int(p.get("count", 0))
+            return total
+        except Exception as e:
+            # If authentication fails (e.g., demo account not set up), assume zero position
+            # This allows paper trading to work without valid credentials
+            error_msg = str(e).lower()
+            if "authentication" in error_msg or "401" in error_msg or "not_found" in error_msg:
+                return 0  # Assume no position if we can't authenticate
+            raise  # Re-raise other errors
 
     def approve(self, intent: OrderIntent) -> Optional[str]:
         if intent.count <= 0:

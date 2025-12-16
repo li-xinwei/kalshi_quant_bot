@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalshi Trading Bot Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #1e293b;
+            border-radius: 10px;
+        }
+        
+        .header h1 {
+            color: #60a5fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .status-running {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-stopped {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .status-paper {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-start {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-start:hover {
+            background: #059669;
+        }
+        
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-stop:hover {
+            background: #dc2626;
+        }
+        
+        .btn-secondary {
+            background: #475569;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #334155;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #334155;
+        }
+        
+        .card h2 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .stat:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            color: #94a3b8;
+        }
+        
+        .stat-value {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+        
+        .stat-value.positive {
+            color: #10b981;
+        }
+        
+        .stat-value.negative {
+            color: #ef4444;
+        }
+        
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .orders-table th,
+        .orders-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .orders-table th {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
+        .orders-table tr:hover {
+            background: #334155;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+        
+        .error {
+            background: #7f1d1d;
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🚀 Kalshi Trading Bot</h1>
+                <div style="margin-top: 10px;">
+                    <span id="status-badge" class="status-badge status-stopped">Stopped</span>
+                    <span id="paper-badge" class="status-badge status-paper" style="margin-left: 10px;">Paper Mode</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="btn-start" onclick="startBot()">Start Bot</button>
+                <button class="btn-stop" onclick="stopBot()">Stop Bot</button>
+                <button class="btn-secondary" onclick="refreshData()">Refresh</button>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Bot Status</h2>
+                <div class="stat">
+                    <span class="stat-label">Status</span>
+                    <span class="stat-value" id="bot-status">Stopped</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Loops</span>
+                    <span class="stat-value" id="loop-count">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Last Update</span>
+                    <span class="stat-value" id="last-update">-</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Active Orders</span>
+                    <span class="stat-value" id="active-orders">0</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>💰 Performance</h2>
+                <div class="stat">
+                    <span class="stat-label">Total Trades</span>
+                    <span class="stat-value" id="total-trades">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Win Rate</span>
+                    <span class="stat-value" id="win-rate">0%</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Net P&L</span>
+                    <span class="stat-value" id="net-pnl">$0.00</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Sharpe Ratio</span>
+                    <span class="stat-value" id="sharpe-ratio">0.00</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🏥 System Health</h2>
+                <div class="stat">
+                    <span class="stat-label">Status</span>
+                    <span class="stat-value" id="health-status">Unknown</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Database</span>
+                    <span class="stat-value" id="db-status">-</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Error Rate</span>
+                    <span class="stat-value" id="error-rate">0%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>📈 P&L Chart</h2>
+            <div class="chart-container">
+                <canvas id="pnl-chart"></canvas>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>📋 Recent Orders</h2>
+            <div id="orders-container">
+                <div class="loading">Loading orders...</div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2>📊 Market Data</h2>
+            <div id="markets-container">
+                <div class="loading">Loading markets...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const socket = io();
+        let pnlChart = null;
+        
+        // Initialize chart
+        const ctx = document.getElementById('pnl-chart').getContext('2d');
+        pnlChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Net P&L',
+                    data: [],
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#e2e8f0' }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+                }
+            }
+        });
+        
+        // WebSocket events
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            refreshData();
+        });
+        
+        socket.on('bot_update', (data) => {
+            updateBotStatus(data);
+        });
+        
+        // API functions
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch(`/api/${endpoint}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                return null;
+            }
+        }
+        
+        async function postAPI(endpoint, data = {}) {
+            try {
+                const response = await fetch(`/api/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error(`Error posting to ${endpoint}:`, error);
+                return null;
+            }
+        }
+        
+        async function refreshData() {
+            // Update status
+            const status = await fetchAPI('status');
+            if (status) {
+                updateBotStatus(status.stats);
+                updateStatusBadge(status.running, status.paper_mode);
+            }
+            
+            // Update performance
+            const performance = await fetchAPI('performance');
+            if (performance && performance.metrics) {
+                updatePerformance(performance.metrics);
+            }
+            
+            // Update health
+            const health = await fetchAPI('health');
+            if (health) {
+                updateHealth(health);
+            }
+            
+            // Update orders
+            await updateOrders();
+            
+            // Update markets
+            await updateMarkets();
+        }
+        
+        function updateBotStatus(stats) {
+            document.getElementById('bot-status').textContent = stats.running ? 'Running' : 'Stopped';
+            document.getElementById('loop-count').textContent = stats.loop_count || 0;
+            document.getElementById('last-update').textContent = stats.last_update ? 
+                new Date(stats.last_update).toLocaleTimeString() : '-';
+            document.getElementById('active-orders').textContent = stats.active_orders || 0;
+        }
+        
+        function updateStatusBadge(running, paperMode) {
+            const badge = document.getElementById('status-badge');
+            badge.textContent = running ? 'Running' : 'Stopped';
+            badge.className = `status-badge ${running ? 'status-running' : 'status-stopped'}`;
+            
+            const paperBadge = document.getElementById('paper-badge');
+            paperBadge.textContent = paperMode ? 'Paper Mode' : 'Live Mode';
+            paperBadge.className = `status-badge ${paperMode ? 'status-paper' : 'status-running'}`;
+        }
+        
+        function updatePerformance(metrics) {
+            document.getElementById('total-trades').textContent = metrics.total_trades || 0;
+            document.getElementById('win-rate').textContent = 
+                (metrics.win_rate * 100).toFixed(1) + '%';
+            const pnl = metrics.net_pnl || 0;
+            document.getElementById('net-pnl').textContent = '$' + pnl.toFixed(2);
+            document.getElementById('net-pnl').className = `stat-value ${pnl >= 0 ? 'positive' : 'negative'}`;
+            document.getElementById('sharpe-ratio').textContent = (metrics.sharpe_ratio || 0).toFixed(2);
+            
+            // Update chart
+            if (pnlChart) {
+                const now = new Date().toLocaleTimeString();
+                pnlChart.data.labels.push(now);
+                pnlChart.data.datasets[0].data.push(pnl);
+                if (pnlChart.data.labels.length > 20) {
+                    pnlChart.data.labels.shift();
+                    pnlChart.data.datasets[0].data.shift();
+                }
+                pnlChart.update();
+            }
+        }
+        
+        function updateHealth(health) {
+            document.getElementById('health-status').textContent = health.status || 'Unknown';
+            if (health.checks) {
+                if (health.checks.database) {
+                    document.getElementById('db-status').textContent = health.checks.database.status;
+                }
+                if (health.checks.order_error_rate) {
+                    const rate = health.checks.order_error_rate.value || 0;
+                    document.getElementById('error-rate').textContent = (rate * 100).toFixed(1) + '%';
+                }
+            }
+        }
+        
+        async function updateOrders() {
+            const ordersData = await fetchAPI('orders?status=active');
+            const container = document.getElementById('orders-container');
+            
+            if (!ordersData || !ordersData.orders || ordersData.orders.length === 0) {
+                container.innerHTML = '<div class="loading">No active orders</div>';
+                return;
+            }
+            
+            let html = '<table class="orders-table"><thead><tr>';
+            html += '<th>Ticker</th><th>Side</th><th>Action</th><th>Price</th><th>Count</th><th>Status</th><th>Actions</th>';
+            html += '</tr></thead><tbody>';
+            
+            ordersData.orders.forEach(order => {
+                html += '<tr>';
+                html += `<td>${order.ticker || order.order_id}</td>`;
+                html += `<td>${order.side || '-'}</td>`;
+                html += `<td>${order.action || '-'}</td>`;
+                html += `<td>${order.price_cents || '-'}c</td>`;
+                html += `<td>${order.count || '-'}</td>`;
+                html += `<td>${order.status || '-'}</td>`;
+                html += `<td><button class="btn-secondary" onclick="cancelOrder('${order.order_id}')">Cancel</button></td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        async function updateMarkets() {
+            const marketsData = await fetchAPI('markets');
+            const container = document.getElementById('markets-container');
+            
+            if (!marketsData || !marketsData.markets) {
+                container.innerHTML = '<div class="loading">No market data</div>';
+                return;
+            }
+            
+            let html = '<table class="orders-table"><thead><tr>';
+            html += '<th>Ticker</th><th>YES Bid</th><th>YES Ask</th><th>NO Bid</th><th>NO Ask</th><th>Mid Price</th>';
+            html += '</tr></thead><tbody>';
+            
+            marketsData.markets.forEach(market => {
+                html += '<tr>';
+                html += `<td>${market.ticker}</td>`;
+                html += `<td>${market.yes_bid || '-'}c</td>`;
+                html += `<td>${market.yes_ask || '-'}c</td>`;
+                html += `<td>${market.no_bid || '-'}c</td>`;
+                html += `<td>${market.no_ask || '-'}c</td>`;
+                html += `<td>${market.mid_price ? (market.mid_price * 100).toFixed(1) + '%' : '-'}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        async function startBot() {
+            const result = await postAPI('start', { paper_mode: true });
+            if (result && result.status === 'started') {
+                alert('Bot started successfully');
+                refreshData();
+            } else {
+                alert('Failed to start bot: ' + (result.error || 'Unknown error'));
+            }
+        }
+        
+        async function stopBot() {
+            const result = await postAPI('stop');
+            if (result && result.status === 'stopped') {
+                alert('Bot stopped');
+                refreshData();
+            }
+        }
+        
+        async function cancelOrder(orderId) {
+            const result = await postAPI(`orders/${orderId}/cancel`);
+            if (result && result.success) {
+                alert('Order cancelled');
+                updateOrders();
+            } else {
+                alert('Failed to cancel order');
+            }
+        }
+        
+        // Auto-refresh every 5 seconds
+        setInterval(refreshData, 5000);
+        
+        // Initial load
+        refreshData();
+    </script>
+</body>
+</html>
+
